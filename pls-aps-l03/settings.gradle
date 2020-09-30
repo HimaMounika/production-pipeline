@@ -1,0 +1,242 @@
+// Using this settings.gradle file assumes that
+// there is an init script providing repositories
+
+buildscript {
+        gradle.injectRepositories(repositories, configurations)
+        dependencies {
+                classpath 'com.intershop:deployment-bootstrap:2.11.4'
+        }
+}
+
+// tell Gradle to run the deployment and configure parameters
+apply plugin: com.intershop.deploy.bootstrap.DeploymentBootstrapPlugin
+
+deploymentBootstrap {
+	gradle.injectRepositories(repositoryHandler, configurationContainer)
+
+// ######### CONFIGURATION FOR JENKINS DEPLOYMENT ######
+        def ASSEMBLY = System.getenv("ASSEMBLY")
+        if(ASSEMBLY != null) {
+                println "ASSEMBLY to deploy: $ASSEMBLY"
+        } else {
+                println "No ASSEMBLY version supplied. Latest assembly   will be used."
+                ASSEMBLY="+"
+        }
+
+assembly ("com.eperium.assembly:plus:$ASSEMBLY") {
+
+
+		
+		/*
+		 * Define the type of your deployment. According to hostType and environment the contained cartridges
+		 * and local component vary.
+		 * The host types are defined in your assembly (e.g. 'webserver', 'appserver', 'share', 'all')
+		 * The environments are defined in your assembly (e.g. 'development', 'test', 'production')
+		 *
+		 * hostType = 'webserver' | 'appserver' | 'share' | 'all' | 'javadoc'
+		 * environment = 'development' | 'test' | 'production'
+		 *
+		 * hostType {
+		 *     hostType 'all'
+		 *     environment 'production'
+		 * }
+		 */
+		hostType {
+			hostType 'appserver'
+			environment 'production'
+		}
+	}
+	
+	// Configure the deployment
+	config {
+		/*
+		 * Adjust the default settings, if necessary. The default configuration is recommended.
+		 * IS_SHARE may not a subfolder of IS_HOME
+		 * The settingsDir may not in IS_HOME
+		 */
+		target {
+			/*
+			 * Configure the platform we are on.
+			 *
+			 * platform = 'linux.rhel.x86_64' | 'linux.sles.x86_64' | 'win.x86_64'
+			 */
+			platform = 'linux.rhel.x86_64'
+			
+			// Id of the instance has to be a number for now
+			instanceId = '1'
+			
+			// IS_SHARE should be located in the 'share' subdirectory of this script's directory
+			shareDirectory = new File('/opt/intershop/eserver1/share')
+			
+			
+			// IS_HOME should be located in the 'local' subdirectory of this script's directory
+			localDirectory = new File('/opt/intershop/eserver1/local')
+			
+			// Local cartridge path for app server
+			cartridgesPath = new File('/opt/intershop/eserver1/local/cartridges')
+		}
+		
+		assemblyDeployment {
+			// Name of user and group that should own the deployed files
+			// (needed on windows and linux)
+			// The deployment can only be run by the specified user
+			user = 'intershop1'
+			userGroup = 'isgrp1'
+			
+			/*
+			 * Configure undeployment.
+			 * purgeUnknownFiles = true | false
+			 *
+			 * true: Clean all
+			 * false: Keep files produced outside the deployment (e.g. log files) in file system.
+			 */
+			purgeUnknownFiles = true
+			
+			modificationPriorities = ['default', 'intershop', 'development']
+		}
+		
+		/*
+		 * Declare some appserver instances.
+		 *
+		 * Add a new instance by adding a new block:
+		 * appserver[n] {
+		 *     tomcatShutdownPort = <PORT1>
+		 *     tomcatHttpPort = <PORT2>
+		 *     tomcatHttpsPort = <PORT3>
+		 *     appserverPort = <PORT4>
+		 * }
+		 * Please use a sequence starting with zero as suffix:
+		 * appserver0, appserver1, appserver2, ...
+		 */
+	
+               tomcat {
+ instances {
+   appserver0 {
+     shutdownPort = 10051
+       port = 10052
+       securePort = 10053
+
+    jvmArgs {
+      minHeapSize = 18431
+      maxHeapSize = 18431
+    }
+
+  }
+ }
+}
+
+          	appserver {
+			nodemanagerJmxPort = 10050
+			hostname = 'pls-aps-l03'
+			instances {
+				appserver0 {
+					tomcatShutdownPort = 10051
+					tomcatHttpPort = 10052
+					tomcatHttpsPort = 10053
+					appserverPort = 10054
+                                        serverGroups=["WFS","BOS","JOB"]
+				}
+			}
+		}
+		
+		// Configure the location of your license.
+		// The license file must be available
+		license {
+			licenseFile = new File('/opt/intershop/install/license/license.xml')
+		}
+		
+		multicast {
+			all {
+				networkInterface = '127.0.0.1'
+			}
+                     		appserver {
+                             address = '239.192.51.20'
+                             port = 50001
+                                     }
+                                      tcm{
+                        address = '239.193.61.30'
+                           port = 50002
+                                }  
+                               cache{
+                             address = '239.194.71.40'
+                             port = 50003
+                                  }
+                                  orm{
+                            address = '239.195.81.50'
+                              port = 50004
+                                      }	
+                                		}
+		webadapter {
+			sharedMemoryKey = '0x2001'
+			port = 80
+			securePort = 443
+			hostname = 'www.plus.nl'
+			configurationServices = ['pls-aps-l03:10054','pls-aps-l04:10054','pls-aps-l05:10054','pls-aps-l06:10054','pls-aps-l07:10054','pls-aps-l09:10054','pls-aps-l10:10054','pls-aps-l11:10054']
+		}
+		
+
+
+		
+		// Database connection parameters
+		database {
+			host = 'pls-dbs-l06'
+			port = 1521
+			sid = 'ISORCL1'
+			tnsAlias = 'ISSERVER.world'
+			user = 'intershop'
+			password = 'intershop'
+			oracleClientDir = new File('/opt/oracle/product/12.1.0/dbclient_1')
+		}
+deployment {
+             modification {
+        keep('modifiedFiles') {
+            priority 'intershop'
+            dir  target.localDirectory
+                      include 'config/cartridges/ac_search_solr.properties'
+                       }
+}
+
+filters {
+                  overrideProperties('cpu') {
+                                        dir = target.shareDirectory
+                                        include 'system/config/cluster/appserver.properties'
+                                        properties['intershop.xmlattributes.computedlineitems.compressed'] = 'true'
+
+                                         }
+
+                              editLines('appserver0.properties') {
+        	dir = target.localDirectory
+			include 'config/appserver0.properties'
+			action { String line ->
+				line =~ 'intershop.event.multicastInterface=127.0.0.1' ? 'intershop.event.multicastInterface=10.3.214.13' : line
+			}
+                         action { String line ->
+                                line =~ 'intershop.cacheengine.wrapped.multicastInterface=127.0.0.1' ? 'intershop.cacheengine.wrapped.multicastInterface=10.3.214.13' : line
+                        }
+                       action { String line ->
+                                line =~ 'intershop.cacheSync.multicastInterface=127.0.0.1' ? 'intershop.cacheSync.multicastInterface=10.3.214.13' : line
+                        }
+                          
+		} 
+}
+
+                                 files {
+                                pluskibanalibConf {
+                                        from new File(settingsDir, 'kibana/logstash-logback-encoder-4.8.jar')
+                                        into new File(target.localDirectory, 'lib/')
+                                        from new File(settingsDir, 'kibana/logback-core-1.1.3.jar')
+                                        into new File(target.localDirectory, 'lib/')
+										from new File(settingsDir, 'kibana/jackson-databind-2.7.1-1.jar')
+                                        into new File(target.localDirectory, 'lib/')
+                                        from new File(settingsDir, 'kibana/jackson-core-2.7.1.jar')
+                                        into new File(target.localDirectory, 'lib/')
+                                        from new File(settingsDir, 'kibana/jackson-annotations-2.7.1.jar')
+                                        into new File(target.localDirectory, 'lib/')
+
+                                }
+                                   }
+
+		}
+	}
+}
+
