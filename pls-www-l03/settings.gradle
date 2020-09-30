@@ -1,0 +1,264 @@
+// Using this settings.gradle file assumes that
+// there is an init script providing repositories
+
+buildscript {
+        gradle.injectRepositories(repositories, configurations)
+        dependencies {
+                classpath 'com.intershop:deployment-bootstrap:2.11.4'
+        }
+}
+
+
+// tell Gradle to run the deployment and configure parameters
+apply plugin: com.intershop.deploy.bootstrap.DeploymentBootstrapPlugin
+
+deploymentBootstrap {
+	gradle.injectRepositories(repositoryHandler, configurationContainer)
+// ######### CONFIGURATION FOR JENKINS DEPLOYMENT ######
+        def ASSEMBLY = System.getenv("ASSEMBLY")
+        if(ASSEMBLY != null) {
+                println "ASSEMBLY to deploy: $ASSEMBLY"
+        } else {
+                println "No ASSEMBLY version supplied. Latest assembly   will be used."
+                ASSEMBLY="+"
+        }
+
+assembly ("com.eperium.assembly:plus:$ASSEMBLY") {
+
+//  	assembly ("com.eperium.assembly:plus:3.2.2.2.20181212111338") {
+//  	assembly ("com.eperium.assembly:plus:3.2.2.1.20181206114924") {
+//  	assembly ("com.eperium.assembly:plus:3.2.2.0.20181205130253") {
+//  	assembly ("com.eperium.assembly:plus:3.2.0.4.20181126045323") {
+//  	assembly ("com.eperium.assembly:plus:3.1.0.1.20180626102649") {
+//  	assembly ("com.eperium.assembly:plus:3.1.0.0.20180622133259") {
+//  	assembly ("com.eperium.assembly:plus:3.0.8.1.20180611083529") {
+//  	assembly ("com.eperium.assembly:plus:3.0.8.0.20180604131241") {
+//  	assembly ("com.eperium.assembly:plus:3.0.6.2.20180504091642") {
+//  	assembly ("com.eperium.assembly:plus:3.0.6.1.20180419103104") {
+//  	assembly ("com.eperium.assembly:plus:3.0.6.0.20180416135544") {
+//  	assembly ("com.eperium.assembly:plus:3.0.5.0.20180405132517") {
+//  	assembly ("com.eperium.assembly:plus:3.0.4.0.20180316115230") {
+//  	assembly ("com.eperium.assembly:plus:3.0.2.0.20180215162059") {
+//  	assembly ("com.eperium.assembly:plus:3.0.1.0.20180214121438") {
+//  	assembly ("com.eperium.assembly:plus:2.1.3.0.20180118045614") {
+//  	assembly ("com.eperium.assembly:plus:2.1.1.2.20180102103453") {
+//  	assembly ("com.eperium.assembly:plus:2.1.1.1.20171212162421") {
+//  	assembly ("com.eperium.assembly:plus:2.1.1.0.20171209071620") {
+//  	assembly ("com.eperium.assembly:plus:2.0.7.6.20171201124343") {
+//  	assembly ("com.eperium.assembly:plus:2.0.7.4.20171122125239") {
+//  	assembly ("com.eperium.assembly:plus:2.0.7.3.20171114093750") {
+//  	assembly ("com.eperium.assembly:plus:2.0.7.2.20171102101349") {
+//  	assembly ("com.eperium.assembly:plus:2.0.7.1.20171025182030") {
+//  	assembly ("com.eperium.assembly:plus:2.0.7.0.20171023104629") {
+//  	assembly ("com.eperium.assembly:plus:2.0.3.4.20171006154214") {
+//  	assembly ("com.eperium.assembly:plus:2.0.3.3.20171003121014") {
+//  	assembly ("com.eperium.assembly:plus:2.0.3.2.20170927102012") {
+//  	assembly ("com.eperium.assembly:plus:2.0.0.7.20170915154647") {
+//  	assembly ("com.eperium.assembly:plus:2.0.0.6.20170817163434") {
+//  	assembly ("com.eperium.assembly:plus:2.0.3.2.20170911161330") {
+//  	assembly ("com.eperium.assembly:plus:2.0.3.1.20170906133339") {
+//  	assembly ("com.eperium.assembly:plus:2.0.0.6.20170817163434") {
+//  	assembly ("com.eperium.assembly:plus:2.0.0.5.20170801140735") {
+//  	assembly ("com.eperium.assembly:plus:2.0.0.4.20170724162635") {
+//  	assembly ("com.eperium.assembly:plus:2.0.0.3.20170713095057") {
+//  	assembly ("com.eperium.assembly:plus:2.0.0.2.20170711112059") {
+//  	assembly ("com.eperium.assembly:plus:2.0.0.0.20170629070215") {
+ // 	assembly ("com.eperium.assembly:plus:2.0.0.0.20170613120459") {
+//   	assembly ("com.eperium.assembly:plus:+") {	
+	/*
+		 * Define the type of your deployment. According to hostType and environment the contained cartridges
+		 * and local component vary.
+		 * The host types are defined in your assembly (e.g. 'webserver', 'appserver', 'share', 'all')
+		 * The environments are defined in your assembly (e.g. 'development', 'test', 'production')
+		 *
+		 * hostType = 'webserver' | 'appserver' | 'share' | 'all' | 'javadoc'
+		 * environment = 'development' | 'test' | 'production'
+		 *
+		 * hostType {
+		 *     hostType 'all'
+		 *     environment 'production'
+		 * }
+		 */
+		hostType {
+			hostType 'webserver'
+			environment 'production'
+		}
+	}
+	
+	// Configure the deployment
+	config {
+		/*
+		 * Adjust the default settings, if necessary. The default configuration is recommended.
+		 * IS_SHARE may not a subfolder of IS_HOME
+		 * The settingsDir may not in IS_HOME
+		 */
+		target {
+			/*
+			 * Configure the platform we are on.
+			 *
+			 * platform = 'linux.rhel.x86_64' | 'linux.sles.x86_64' | 'win.x86_64'
+			 */
+			platform = 'linux.rhel.x86_64'
+			
+			// Id of the instance has to be a number for now
+			instanceId = '1'
+			
+			// IS_SHARE should be located in the 'share' subdirectory of this script's directory
+			shareDirectory = new File('/opt/intershop/eserver1/share')
+			
+			
+			// IS_HOME should be located in the 'local' subdirectory of this script's directory
+			localDirectory = new File('/opt/intershop/eserver1/local')
+		}
+		
+		assemblyDeployment {
+			// Name of user and group that should own the deployed files
+			// (needed on windows and linux)
+			// The deployment can only be run by the specified user
+			user = 'intershop1'
+			userGroup = 'isgrp1'
+			
+			/*
+			 * Configure undeployment.
+			 * purgeUnknownFiles = true | false
+			 *
+			 * true: Clean all
+			 * false: Keep files produced outside the deployment (e.g. log files) in file system.
+			 */
+			purgeUnknownFiles = true
+			
+			modificationPriorities = ['default', 'intershop', 'development']
+		}
+		
+		/*
+		 * Declare some appserver instances.
+		 *
+		 * Add a new instance by adding a new block:
+		 * appserver[n] {
+		 *     tomcatShutdownPort = <PORT1>
+		 *     tomcatHttpPort = <PORT2>
+		 *     tomcatHttpsPort = <PORT3>
+		 *     appserverPort = <PORT4>
+		 * }
+		 * Please use a sequence starting with zero as suffix:
+		 * appserver0, appserver1, appserver2, ...
+		 */
+
+		
+		// Configure the location of your license.
+		// The license file must be available
+		license {
+			licenseFile = new File('/opt/intershop/install/license.xml')
+		}
+		
+		multicast {
+			all {
+				networkInterface = '127.0.0.1'
+			}
+		              appserver {
+                        address = '239.192.51.20'
+                             port = 50001
+                               }
+                                tcm{
+                     address = '239.193.61.30'
+                     port = 50002
+                        }  
+                                 cache{
+                         address = '239.194.71.40'
+                 port = 50003
+                           }
+                                orm{
+                           address = '239.195.81.50'
+                                 port = 50004
+                                }	
+		}
+		
+		webadapter {
+			sharedMemoryKey = '0x2001'
+			port = 80
+			securePort = 443
+			hostname = 'www.plus.nl'
+			configurationServices = ['pls-aps-l03:10054','pls-aps-l04:10054','pls-aps-l05:10054','pls-aps-l06:10054','pls-aps-l07:10054','pls-aps-l09:10054','pls-aps-l10:10054','pls-aps-l11:10054']
+		}
+		
+		// Database connection parameters
+		database {
+			host = 'pls-dbs-l06'
+			port = 1521
+			sid = 'ISORCL1'
+			tnsAlias = 'ISSERVER.world'
+			user = 'intershop'
+			password = 'intershop'
+			oracleClientDir = new File('/opt/oracle/product/12.1.0/dbclient_1/')
+		}
+if(findProject(':3rd_apache')){
+			project(':3rd_apache') {
+				def configClosure = {
+					deployment.files.local { 
+						exclude 'httpd/conf/extra/httpd-deflate.conf'
+						exclude 'httpd/conf/extra/httpd-ssl.conf'
+						exclude 'httpd/conf/extra/httpd-mpm.conf'
+					}
+				}
+				if (project.state.executed) {
+          				 configClosure()
+        			} else {
+            				afterEvaluate(configClosure)
+        			}	
+			}
+		}
+deployment {
+	
+  modification {
+        keep('KeepFiles') {
+priority 'intershop'
+dir target.localDirectory
+include 'httpd/conf/httpd.conf'
+
+}
+}
+
+		filters {
+				fullContent ('appendHTTPDConfInclude') {
+					dir = target.localDirectory
+					include 'webadapter/httpd-webadapter.conf'
+					action { StringBuilder content ->
+						content.append(System.lineSeparator 
+							+ '# Plus custom configuration' + System.lineSeparator 
+							+ "Include ${target.localDirectory}/etc/httpd/extra/httpd-plus.conf" + System.lineSeparator 
+							+ "Include ${target.localDirectory}/etc/httpd/extra/httpd-redirects.conf")
+					}
+				}
+			}
+			files {
+				plusApacheConf {
+					from new File(settingsDir, 'httpd-plus.conf')
+					from new File(settingsDir, 'httpd-redirects.conf')
+					from new File(settingsDir, 'httpd-deflate.conf')
+					from new File(settingsDir, 'httpd-ssl.conf')
+					from new File(settingsDir, 'httpd-mpm.conf')
+					into new File(target.localDirectory, 'httpd/conf/extra/')
+				}
+				
+               fbConf {
+                    from new File(settingsDir, '35f1oux6xg9osa4j7w86shxzfz7luu.html')
+                    into new File(target.localDirectory, 'webadapter/public/')
+                    }
+
+
+			}
+			files {
+				plusApacheInstallSSLCert {
+					from zipTree(new File(settingsDir,'ssl.zip').getAbsolutePath())
+					into new File(target.localDirectory, 'httpd/conf/')
+				}
+			}
+			files {
+				plusApacheIncludeBiztalkBasicAuth {
+					from new File(settingsDir, 'plus-biztalk.user')
+					into new File(target.localDirectory, 'httpd/conf/')
+				}
+			}
+		}
+	}
+}	
